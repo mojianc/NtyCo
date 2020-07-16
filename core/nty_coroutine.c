@@ -76,7 +76,7 @@ __asm__ (
 "ret                                                \n"
 );
 #elif defined(__x86_64__)
-
+//%rdi 保存第一个参数的值，即 new_ctx 的值，%rsi 保存第二 个参数的值，即保存 cur_ctx 的值。
 __asm__ (
 "    .text                                  \n"
 "       .p2align 4,,15                                   \n"
@@ -182,7 +182,7 @@ int nty_coroutine_resume(nty_coroutine *co) {
 
 	nty_schedule *sched = nty_coroutine_get_sched();
 	sched->curr_thread = co;
-	_switch(&co->ctx, &co->sched->ctx);
+    _switch(&co->ctx, &co->sched->ctx);  //进行上下文切换（寄存器切换）
 	sched->curr_thread = NULL;
 
 	nty_coroutine_madvise(co);
@@ -232,7 +232,9 @@ static void nty_coroutine_sched_key_destructor(void *data) {
 }
 
 static void nty_coroutine_sched_key_creator(void) {
+        //pthread_key_create():第一个参数就是声明的pthread_key_t变量，第二个参数是一个清理函数，用来在线程释放该线程存储的时候被调用。
 	assert(pthread_key_create(&global_sched_key, nty_coroutine_sched_key_destructor) == 0);
+        //pthread_setspecific():当线程中需要存储特殊值的时候调用该函数，该函数有两个参数，第一个为前面声明的pthread_key_t变量，第二个为void*变量，用来存储任何类型的值。
 	assert(pthread_setspecific(global_sched_key, NULL) == 0);
 	
 	return ;
@@ -243,11 +245,11 @@ static void nty_coroutine_sched_key_creator(void) {
 // create 
 //
 int nty_coroutine_create(nty_coroutine **new_co, proc_coroutine func, void *arg) {
-
+    //pthread_once()本函数使用初值为PTHREAD_ONCE_INIT的sched_key_once变量保证nty_coroutine_sched_key_creator()函数在本进程执行序列中仅执行一次
 	assert(pthread_once(&sched_key_once, nty_coroutine_sched_key_creator) == 0);
-	nty_schedule *sched = nty_coroutine_get_sched();
+    nty_schedule *sched = nty_coroutine_get_sched();  //获取调度器
 
-	if (sched == NULL) {
+    if (sched == NULL) {  //如果调度器不存在，则创建调度器
 		nty_schedule_create(0);
 		
 		sched = nty_coroutine_get_sched();
@@ -257,13 +259,16 @@ int nty_coroutine_create(nty_coroutine **new_co, proc_coroutine func, void *arg)
 		}
 	}
 
+    //创建协程
 	nty_coroutine *co = calloc(1, sizeof(nty_coroutine));
 	if (co == NULL) {
 		printf("Failed to allocate memory for new coroutine\n");
 		return -2;
 	}
-
-	int ret = posix_memalign(&co->stack, getpagesize(), sched->stack_size);
+	//int posix_memalign (void **memptr,size_t alignment,size_t size);
+	//调用posix_memalign( )成功时会返回size字节的动态内存，并且这块内存的地址是alignment的倍数。参数alignment必须是2的幂，还是void指针的大小的倍数。返回的内存块的地址放在了memptr里面，内存开辟成功函数返回值是0.
+	//开辟的内存 通过 free(memptr)进行释放
+	int ret = posix_memalign(&co->stack, getpagesize(), sched->stack_size); //getpagesize()返回内存分页大小
 	if (ret) {
 		printf("Failed to allocate stack for new coroutine\n");
 		free(co);
@@ -282,7 +287,7 @@ int nty_coroutine_create(nty_coroutine **new_co, proc_coroutine func, void *arg)
 	co->fd_wait = -1;
 #endif
 	co->arg = arg;
-	co->birth = nty_coroutine_usec_now();
+    co->birth = nty_coroutine_usec_now(); //记录时间
 	*new_co = co;
 
 	TAILQ_INSERT_TAIL(&co->sched->ready, co, ready_next);

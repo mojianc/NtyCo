@@ -60,14 +60,14 @@ int nty_epoller_ev_register_trigger(void) {
 	nty_schedule *sched = nty_coroutine_get_sched();
 
 	if (!sched->eventfd) {
-		sched->eventfd = eventfd(0, EFD_NONBLOCK);
-		assert(sched->eventfd != -1);
+            sched->eventfd = eventfd(0, EFD_NONBLOCK); //eventfd()是Linux 2.6提供的一种系统调用，它可以用来实现事件通知;参数:计数器值为0，非阻塞
+            assert(sched->eventfd != -1);
 	}
 
 	struct epoll_event ev;
-	ev.events = EPOLLIN;
+        ev.events = EPOLLIN;   //设置为可读事件
 	ev.data.fd = sched->eventfd;
-	int ret = epoll_ctl(sched->poller_fd, EPOLL_CTL_ADD, sched->eventfd, &ev);
+        int ret = epoll_ctl(sched->poller_fd, EPOLL_CTL_ADD, sched->eventfd, &ev);  //添加epoll的监听事件
 
 	assert(ret != -1);
 }

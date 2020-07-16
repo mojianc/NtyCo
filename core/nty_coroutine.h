@@ -253,7 +253,7 @@ static inline uint64_t nty_coroutine_diff_usecs(uint64_t t1, uint64_t t2) {
 
 static inline uint64_t nty_coroutine_usec_now(void) {
 	struct timeval t1 = {0, 0};
-	gettimeofday(&t1, NULL);
+        gettimeofday(&t1, NULL); //获取时间
 
 	return t1.tv_sec * 1000000 + t1.tv_usec;
 }

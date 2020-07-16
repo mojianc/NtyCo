@@ -204,16 +204,16 @@ int nty_schedule_create(int stack_size) {
 		printf("Failed to initialize scheduler\n");
 		return -1;
 	}
-
+    //设置线程变量sched
 	assert(pthread_setspecific(global_sched_key, sched) == 0);
 
-	sched->poller_fd = nty_epoller_create();
+    sched->poller_fd = nty_epoller_create(); //创建epoll句柄
 	if (sched->poller_fd == -1) {
 		printf("Failed to initialize epoller\n");
 		nty_schedule_free(sched);
 		return -2;
 	}
-
+    //创建eventfd，添加可读事件到epoll中进行监视
 	nty_epoller_ev_register_trigger();
 
 	sched->stack_size = sched_stack_size;
@@ -222,16 +222,16 @@ int nty_schedule_create(int stack_size) {
 	sched->spawned_coroutines = 0;
 	sched->default_timeout = 3000000u;
 
-	RB_INIT(&sched->sleeping);
-	RB_INIT(&sched->waiting);
+	RB_INIT(&sched->sleeping); //睡眠红黑树
+	RB_INIT(&sched->waiting);  //等待红黑树
 
-	sched->birth = nty_coroutine_usec_now();
+	sched->birth = nty_coroutine_usec_now(); //记录当前时间
 
 	TAILQ_INIT(&sched->ready);
 	//TAILQ_INIT(&sched->defer);
 	LIST_INIT(&sched->busy);
 
-	bzero(&sched->ctx, sizeof(nty_cpu_ctx));
+    bzero(&sched->ctx, sizeof(nty_cpu_ctx)); //系统调用，将整块空间清零
 }
 
 
