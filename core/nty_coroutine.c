@@ -113,10 +113,10 @@ static void _exec(void *lt) {
 #endif
 
 	nty_coroutine *co = (nty_coroutine*)lt;
-	co->func(co->arg);
+	co->func(co->arg);      //在这里调用co需要的处理的真正函数
 	co->status |= (BIT(NTY_COROUTINE_STATUS_EXITED) | BIT(NTY_COROUTINE_STATUS_FDEOF) | BIT(NTY_COROUTINE_STATUS_DETACH));
 #if 1
-	nty_coroutine_yield(co);
+	nty_coroutine_yield(co);//处理完以后在切回到主流程
 #else
 	co->ops = 0;
 	_switch(&co->sched->ctx, &co->ctx);
@@ -177,12 +177,12 @@ static inline void nty_coroutine_madvise(nty_coroutine *co) {
 int nty_coroutine_resume(nty_coroutine *co) {
 	
 	if (co->status & BIT(NTY_COROUTINE_STATUS_NEW)) {
-		nty_coroutine_init(co);
+		nty_coroutine_init(co); //初始化co主要是设置co中调用堆栈，以及switch是调用eip 保存的函数exec
 	}
 
 	nty_schedule *sched = nty_coroutine_get_sched();
 	sched->curr_thread = co;
-    _switch(&co->ctx, &co->sched->ctx);  //进行上下文切换（寄存器切换）
+    _switch(&co->ctx, &co->sched->ctx);  //进行上下文切换（寄存器切换），切换一直执行co->eip保存的函数exce(),在exce中执行co->func(co->arg)
 	sched->curr_thread = NULL;
 
 	nty_coroutine_madvise(co);

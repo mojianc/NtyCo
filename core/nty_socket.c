@@ -91,19 +91,19 @@ static int nty_poll_inner(struct pollfd *fds, nfds_t nfds, int timeout) {
 	for (i = 0;i < nfds;i ++) {
 	
 		struct epoll_event ev;
-		ev.events = nty_pollevent_2epoll(fds[i].events);
+		ev.events = nty_pollevent_2epoll(fds[i].events); //poll的事件类型转成epoll的事件类型
 		ev.data.fd = fds[i].fd;
-		epoll_ctl(sched->poller_fd, EPOLL_CTL_ADD, fds[i].fd, &ev);
+		epoll_ctl(sched->poller_fd, EPOLL_CTL_ADD, fds[i].fd, &ev); //加入epoll监听
 
 		co->events = fds[i].events;
 		nty_schedule_sched_wait(co, fds[i].fd, fds[i].events, timeout);
 	}
-	nty_coroutine_yield(co); 
+	nty_coroutine_yield(co); //切回主流程
 
 	for (i = 0;i < nfds;i ++) {
 	
 		struct epoll_event ev;
-		ev.events = nty_pollevent_2epoll(fds[i].events);
+		ev.events = nty_pollevent_2epoll(fds[i].events); //将epoll事件类型转成poll事件类型
 		ev.data.fd = fds[i].fd;
 		epoll_ctl(sched->poller_fd, EPOLL_CTL_DEL, fds[i].fd, &ev);
 
@@ -116,18 +116,18 @@ static int nty_poll_inner(struct pollfd *fds, nfds_t nfds, int timeout) {
 
 int nty_socket(int domain, int type, int protocol) {
 
-	int fd = socket(domain, type, protocol);
+	int fd = socket(domain, type, protocol); //创建socket
 	if (fd == -1) {
 		printf("Failed to create a new socket\n");
 		return -1;
 	}
-	int ret = fcntl(fd, F_SETFL, O_NONBLOCK);
+	int ret = fcntl(fd, F_SETFL, O_NONBLOCK); //设置非阻塞
 	if (ret == -1) {
 		close(ret);
 		return -1;
 	}
 	int reuse = 1;
-	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
+	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)); //设置可重用
 	
 	return fd;
 }
@@ -144,9 +144,9 @@ int nty_accept(int fd, struct sockaddr *addr, socklen_t *len) {
 		struct pollfd fds;
 		fds.fd = fd;
 		fds.events = POLLIN | POLLERR | POLLHUP;
-		nty_poll_inner(&fds, 1, timeout);
+		nty_poll_inner(&fds, 1, timeout);  
 
-		sockfd = accept(fd, addr, len);
+		sockfd = accept(fd, addr, len);   //获取连接
 		if (sockfd < 0) {
 			if (errno == EAGAIN) {
 				continue;
@@ -162,13 +162,13 @@ int nty_accept(int fd, struct sockaddr *addr, socklen_t *len) {
 		}
 	}
 
-	int ret = fcntl(sockfd, F_SETFL, O_NONBLOCK);
+	int ret = fcntl(sockfd, F_SETFL, O_NONBLOCK);  //设置非阻塞
 	if (ret == -1) {
 		close(sockfd);
 		return -1;
 	}
 	int reuse = 1;
-	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
+	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)); //设置可重用
 	
 	return sockfd;
 }

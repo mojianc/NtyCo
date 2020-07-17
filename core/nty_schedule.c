@@ -312,11 +312,11 @@ void nty_schedule_run(void) {
 		
 		// 1. expired --> sleep rbtree
 		nty_coroutine *expired = NULL;
-		while ((expired = nty_schedule_expired(sched)) != NULL) {
+		while ((expired = nty_schedule_expired(sched)) != NULL) { //处理超时的co
 			nty_coroutine_resume(expired);
 		}
 		// 2. ready queue
-		nty_coroutine *last_co_ready = TAILQ_LAST(&sched->ready, _nty_coroutine_queue);
+		nty_coroutine *last_co_ready = TAILQ_LAST(&sched->ready, _nty_coroutine_queue); //处理就绪队列
 		while (!TAILQ_EMPTY(&sched->ready)) {
 			nty_coroutine *co = TAILQ_FIRST(&sched->ready);
 			TAILQ_REMOVE(&co->sched->ready, co, ready_next);
@@ -331,7 +331,7 @@ void nty_schedule_run(void) {
 		}
 
 		// 3. wait rbtree
-		nty_schedule_epoll(sched);
+		nty_schedule_epoll(sched);  //epoll_wait等待监听事件
 		while (sched->num_new_events) {
 			int idx = --sched->num_new_events;
 			struct epoll_event *ev = sched->eventlist+idx;
